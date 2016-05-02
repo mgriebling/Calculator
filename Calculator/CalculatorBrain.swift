@@ -11,7 +11,12 @@ import Foundation
 class CalculatorBrain {
     
     private var accumulator = 0.0
-    private var internalProgram = [AnyObject]()
+    private var internalProgram = [PropertyList]()
+    
+    var description = " "
+    var isPartialResult : Bool {
+        return pending != nil
+    }
     
     func setOperand(operand: Double) {
         accumulator = operand
@@ -19,17 +24,23 @@ class CalculatorBrain {
     }
     
     private var operations: Dictionary<String,Operation> = [
-        "π" :   Operation.Constant(M_PI),
-        "e" :   Operation.Constant(M_E),
-        "±" :   Operation.UnaryOperation( { -$0 }),
-        "√" :   Operation.UnaryOperation(sqrt),
+        "π"   : Operation.Constant(M_PI),
+        "e"   : Operation.Constant(M_E),
+        "±"   : Operation.UnaryOperation( - ),
+        "√"   : Operation.UnaryOperation(sqrt),
+        "∛"   : Operation.UnaryOperation(cbrt),
+        "x²"  : Operation.UnaryOperation( { $0 * $0 } ),
+        "x³"  : Operation.UnaryOperation( { $0 * $0 * $0 } ),
+        "x⁻¹"  : Operation.UnaryOperation( { $0 == 0 ? 0.0 : 1.0 / $0 } ),
         "cos" : Operation.UnaryOperation(cos),
         "sin" : Operation.UnaryOperation(sin),
-        "×" :   Operation.BinaryOperation( {$0 * $1}),
-        "÷" :   Operation.BinaryOperation( {$0 / $1}),
-        "+" :   Operation.BinaryOperation( {$0 + $1}),
-        "−" :   Operation.BinaryOperation( {$0 - $1}),
-        "=" :   Operation.Equals
+        "exp" : Operation.UnaryOperation(exp),
+        "log" : Operation.UnaryOperation(log),
+        "×"   : Operation.BinaryOperation( * ),
+        "÷"   : Operation.BinaryOperation( / ),
+        "+"   : Operation.BinaryOperation( + ),
+        "−"   : Operation.BinaryOperation( - ),
+        "="   : Operation.Equals
     ]
     
     private enum Operation {

@@ -14,7 +14,6 @@ class ViewController: UIViewController {
     @IBOutlet private var history: UILabel!
     
     private var userIsInTheMiddleOfTyping = false
-    private let historyBlank = " "
 
     @IBAction private func touchDigit(sender: UIButton) {
         let digit = sender.currentTitle!
@@ -26,7 +25,6 @@ class ViewController: UIViewController {
             display.text = digit
             userIsInTheMiddleOfTyping = true
         }
-        addToHistory(digit)
     }
     
     private var displayValue: Double {
@@ -36,22 +34,6 @@ class ViewController: UIViewController {
         set {
             display.text = String(newValue)
         }
-    }
-    
-    private func addToHistory (content: String) {
-        var previousHistory = history.text!
-        
-        // check if bracketing is required
-        if previousHistory.containsString("=") {
-            previousHistory = "(" + previousHistory.stringByReplacingOccurrencesOfString("=", withString: "") + ")"
-        }
-        
-        if previousHistory == historyBlank {
-            previousHistory = content
-        } else {
-            previousHistory = previousHistory + content
-        }
-        history.text = previousHistory
     }
     
     var savedProgram: CalculatorBrain.PropertyList?
@@ -71,8 +53,8 @@ class ViewController: UIViewController {
         userIsInTheMiddleOfTyping = false
         displayValue = 0
         savedProgram = nil
-        history.text = historyBlank
         brain.clear()
+        history.text = brain.description
     }
     
     private var brain = CalculatorBrain()
@@ -84,7 +66,6 @@ class ViewController: UIViewController {
         }
         if let mathematicalSymbol = sender.currentTitle {
             brain.performOperation(mathematicalSymbol)
-            addToHistory(mathematicalSymbol)
         }
         displayValue = brain.result
     }
