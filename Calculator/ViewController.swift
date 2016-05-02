@@ -46,6 +46,7 @@ class ViewController: UIViewController {
         if savedProgram != nil {
             brain.program = savedProgram!
             displayValue = brain.result
+            updateHistory()
         }
     }
     
@@ -54,7 +55,14 @@ class ViewController: UIViewController {
         displayValue = 0
         savedProgram = nil
         brain.clear()
-        history.text = brain.description
+        updateHistory()
+    }
+    
+    private func updateHistory() {
+        let postString = brain.isPartialResult ? "..." : "="
+        if !userIsInTheMiddleOfTyping {
+            history.text = brain.description + postString
+        }
     }
     
     private var brain = CalculatorBrain()
@@ -68,6 +76,7 @@ class ViewController: UIViewController {
             brain.performOperation(mathematicalSymbol)
         }
         displayValue = brain.result
+        updateHistory()
     }
 
 
