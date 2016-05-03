@@ -27,16 +27,16 @@ class CalculatorBrain {
     private var operations: Dictionary<String,Operation> = [
         "π"   : Operation.Constant(M_PI),
         "e"   : Operation.Constant(M_E),
-        "±"   : Operation.UnaryOperation( - ),
-        "√"   : Operation.UnaryOperation(sqrt),
-        "∛"   : Operation.UnaryOperation(cbrt),
-        "x²"  : Operation.UnaryOperation( { $0 * $0 } ),
-        "x³"  : Operation.UnaryOperation( { $0 * $0 * $0 } ),
-        "x⁻¹"  : Operation.UnaryOperation( { $0 == 0 ? 0.0 : 1.0 / $0 } ),
-        "cos" : Operation.UnaryOperation(cos),
-        "sin" : Operation.UnaryOperation(sin),
-        "exp" : Operation.UnaryOperation(exp),
-        "log" : Operation.UnaryOperation(log),
+        "±"   : Operation.UnaryPrefixOperation( - ),
+        "√"   : Operation.UnaryPrefixOperation(sqrt),
+        "∛"   : Operation.UnaryPrefixOperation(cbrt),
+        "x²"  : Operation.UnaryPostfixOperation( { $0 * $0 } ),
+        "x³"  : Operation.UnaryPostfixOperation( { $0 * $0 * $0 } ),
+        "x⁻¹" : Operation.UnaryPostfixOperation( { $0 == 0 ? 0.0 : 1.0 / $0 } ),
+        "cos" : Operation.UnaryPrefixOperation(cos),
+        "sin" : Operation.UnaryPrefixOperation(sin),
+        "exp" : Operation.UnaryPrefixOperation(exp),
+        "log" : Operation.UnaryPrefixOperation(log),
         "×"   : Operation.BinaryOperation( * ),
         "÷"   : Operation.BinaryOperation( / ),
         "+"   : Operation.BinaryOperation( + ),
@@ -46,12 +46,13 @@ class CalculatorBrain {
     
     private enum Operation {
         case Constant(Double)
-        case UnaryOperation((Double) -> Double)
+        case UnaryPrefixOperation((Double) -> Double)
+        case UnaryPostfixOperation((Double) -> Double)
         case BinaryOperation((Double, Double) -> Double)
         case Equals
     }
     
-    private func addToDescription (symbol: String) {
+    private func addToDescription (symbol: String, asPrefix: Bool = false) {
         var result = description
         
         // We use " " when no description so the label isn't resized
@@ -62,7 +63,12 @@ class CalculatorBrain {
         // remove "x"s from the symbol (e.g., x³)
         let strippedSymbol = symbol.stringByReplacingOccurrencesOfString("x", withString: "")
         
-        description = result + strippedSymbol
+        // either add symbol as a prefix or a suffix
+        description = asPrefix ? strippedSymbol + "(" + result + ")" : result + strippedSymbol
+    }
+    
+    private func addBracketsToDescription() {
+        if isPartialResult { description = "(" + description + ")" }
     }
     
     func performOperation(symbol: String) {
@@ -72,13 +78,17 @@ class CalculatorBrain {
             case .Constant(let value):
                 accumulator = value
                 addToDescription(symbol)
-            case .UnaryOperation(let function):
+            case .UnaryPrefixOperation(let function):
+                accumulator = function(accumulator)
+                addToDescription(symbol, asPrefix: true)
+            case .UnaryPostfixOperation(let function):
                 accumulator = function(accumulator)
                 addToDescription(symbol)
             case .BinaryOperation(let function):
-                addToDescription(symbol)
+                addBracketsToDescription()
                 executePendingBinaryOperation()
                 pending = PendingBinaryOperationInfo(binaryFunction: function, firstOperand: accumulator)
+                addToDescription(symbol)
             case .Equals:
                 executePendingBinaryOperation()
             }
