@@ -10,49 +10,55 @@ import Foundation
 
 class CalculatorBrain {
     
-    private var accumulator = 0.0
-    private var internalProgram = [PropertyList]()
+    fileprivate var accumulator = 0.0
+    fileprivate var internalProgram = [PropertyList]()
     
     var description = " "
     var isPartialResult : Bool {
         return pending != nil
     }
     
-    func setOperand(operand: Double) {
+    fileprivate var argument : String?
+    
+    func setOperand(_ operand: Double) {
         accumulator = operand
-        internalProgram.append(operand)
-        addToDescription(String(operand))
+        internalProgram.append(operand as CalculatorBrain.PropertyList)
+        if isPartialResult {
+            argument = String(operand)
+        } else {
+            addToDescription(String(operand))
+        }
     }
     
-    private var operations: Dictionary<String,Operation> = [
-        "π"   : Operation.Constant(M_PI),
-        "e"   : Operation.Constant(M_E),
-        "±"   : Operation.UnaryPrefixOperation( - ),
-        "√"   : Operation.UnaryPrefixOperation(sqrt),
-        "∛"   : Operation.UnaryPrefixOperation(cbrt),
-        "x²"  : Operation.UnaryPostfixOperation( { $0 * $0 } ),
-        "x³"  : Operation.UnaryPostfixOperation( { $0 * $0 * $0 } ),
-        "x⁻¹" : Operation.UnaryPostfixOperation( { $0 == 0 ? 0.0 : 1.0 / $0 } ),
-        "cos" : Operation.UnaryPrefixOperation(cos),
-        "sin" : Operation.UnaryPrefixOperation(sin),
-        "exp" : Operation.UnaryPrefixOperation(exp),
-        "log" : Operation.UnaryPrefixOperation(log),
-        "×"   : Operation.BinaryOperation( * ),
-        "÷"   : Operation.BinaryOperation( / ),
-        "+"   : Operation.BinaryOperation( + ),
-        "−"   : Operation.BinaryOperation( - ),
-        "="   : Operation.Equals
+    fileprivate var operations: Dictionary<String,Operation> = [
+        "π"   : Operation.constant(M_PI),
+        "e"   : Operation.constant(M_E),
+        "±"   : Operation.unaryPrefixOperation( - ),
+        "√"   : Operation.unaryPrefixOperation(sqrt),
+        "∛"   : Operation.unaryPrefixOperation(cbrt),
+        "x²"  : Operation.unaryPostfixOperation( { $0 * $0 } ),
+        "x³"  : Operation.unaryPostfixOperation( { $0 * $0 * $0 } ),
+        "x⁻¹" : Operation.unaryPostfixOperation( { $0 == 0 ? 0.0 : 1.0 / $0 } ),
+        "cos" : Operation.unaryPrefixOperation(cos),
+        "sin" : Operation.unaryPrefixOperation(sin),
+        "exp" : Operation.unaryPrefixOperation(exp),
+        "log" : Operation.unaryPrefixOperation(log),
+        "×"   : Operation.binaryOperation( * ),
+        "÷"   : Operation.binaryOperation( / ),
+        "+"   : Operation.binaryOperation( + ),
+        "−"   : Operation.binaryOperation( - ),
+        "="   : Operation.equals
     ]
     
-    private enum Operation {
-        case Constant(Double)
-        case UnaryPrefixOperation((Double) -> Double)
-        case UnaryPostfixOperation((Double) -> Double)
-        case BinaryOperation((Double, Double) -> Double)
-        case Equals
+    fileprivate enum Operation {
+        case constant(Double)
+        case unaryPrefixOperation((Double) -> Double)
+        case unaryPostfixOperation((Double) -> Double)
+        case binaryOperation((Double, Double) -> Double)
+        case equals
     }
     
-    private func addToDescription (symbol: String, asPrefix: Bool = false) {
+    fileprivate func addToDescription (_ symbol: String, asPrefix: Bool = false) {
         var result = description
         
         // We use " " when no description so the label isn't resized
@@ -61,58 +67,68 @@ class CalculatorBrain {
         }
         
         // remove "x"s from the symbol (e.g., x³)
-        let strippedSymbol = symbol.stringByReplacingOccurrencesOfString("x", withString: "")
+        let strippedSymbol = symbol.replacingOccurrences(of: "x", with: "")
+        
+        if let arg = argument {
+            if asPrefix {
+                result = result + strippedSymbol + "(" + arg + ")"
+            } else {
+                result =  result + "(" + arg + ")" + strippedSymbol
+            }
+            argument = nil
+        } else {
+            result = result + symbol
+        }
         
         // either add symbol as a prefix or a suffix
-        description = asPrefix ? strippedSymbol + "(" + result + ")" : result + strippedSymbol
+        description = result
     }
     
-    private func addBracketsToDescription() {
+    fileprivate func addBracketsToDescription() {
         if isPartialResult { description = "(" + description + ")" }
     }
     
-    func performOperation(symbol: String) {
-        internalProgram.append(symbol)
+    func performOperation(_ symbol: String) {
+        internalProgram.append(symbol as CalculatorBrain.PropertyList)
         if let operation = operations[symbol] {
             switch operation {
-            case .Constant(let value):
+            case .constant(let value):
                 accumulator = value
                 addToDescription(symbol)
-            case .UnaryPrefixOperation(let function):
-                accumulator = function(accumulator)
+            case .unaryPrefixOperation(let function):
                 addToDescription(symbol, asPrefix: true)
-            case .UnaryPostfixOperation(let function):
+                accumulator = function(accumulator)
+            case .unaryPostfixOperation(let function):
                 accumulator = function(accumulator)
                 addToDescription(symbol)
-            case .BinaryOperation(let function):
-                addBracketsToDescription()
+            case .binaryOperation(let function):
                 executePendingBinaryOperation()
                 pending = PendingBinaryOperationInfo(binaryFunction: function, firstOperand: accumulator)
                 addToDescription(symbol)
-            case .Equals:
+            case .equals:
                 executePendingBinaryOperation()
             }
         }
     }
     
-    private func executePendingBinaryOperation() {
+    fileprivate func executePendingBinaryOperation() {
         if pending != nil {
             accumulator = pending!.binaryFunction(pending!.firstOperand, accumulator)
             pending = nil
         }
     }
     
-    private var pending: PendingBinaryOperationInfo?
+    fileprivate var pending: PendingBinaryOperationInfo?
     
-    private struct PendingBinaryOperationInfo {
-        var binaryFunction: (Double, Double) -> Double
-        var firstOperand: Double
+    fileprivate struct PendingBinaryOperationInfo {
+        let binaryFunction: (Double, Double) -> Double
+        let firstOperand: Double
     }
     
     typealias PropertyList = AnyObject
     var program: PropertyList {
         get {
-            return internalProgram
+            return internalProgram as CalculatorBrain.PropertyList
         }
         set {
             clear()
